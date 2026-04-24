@@ -32,7 +32,6 @@ def _validate_year(year: int) -> int:
 
 def _validate_scale(scale: str) -> str:
     s = _validate_non_empty("scale", scale)
-    # simple format check: "1:64", "1:43", etc.
     if ":" not in s:
         raise ValueError("scale must look like '1:64'")
     left, right = s.split(":", 1)
@@ -149,7 +148,6 @@ class CarBase(ABC):
 
     @classmethod
     def from_car(cls, other: "CarBase") -> "CarBase":
-        # "конструктор копирования"
         return cls(
             car_id=other.id,
             brand=other.brand,
@@ -210,7 +208,6 @@ class CarBase(ABC):
             notes=str(d.get("notes", "")),
         )
 
-    # "перегрузка операторов"
     def __str__(self) -> str:
         p = "-" if self.price is None else f"{self.price:.2f}"
         return f"[{self.id}] {self.brand} {self.model} ({self.year}), {self.scale}, {self.car_type.value}, price={p}"
@@ -224,7 +221,6 @@ class CarBase(ABC):
         return self.to_dict() == other.to_dict()
 
     def __lt__(self, other: "CarBase") -> bool:
-        # удобная сортировка: по году, потом по id
         if self.year != other.year:
             return self.year < other.year
         return self.id < other.id
