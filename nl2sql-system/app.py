@@ -7,13 +7,11 @@ from langchain_community.chat_models import ChatOllama
 from langchain_community.utilities import SQLDatabase
 from langchain_core.prompts import ChatPromptTemplate
 
-# --- НАСТРОЙКИ ---
 OLLAMA_MODEL = "llama3"
 
 st.set_page_config(page_title="Pro SQL Multi-Agent System", layout="wide")
 st.title("🏛 AI SQL Analytics System (Multi-Agent Pro)")
 
-# --- БОКОВАЯ ПАНЕЛЬ ---
 with st.sidebar:
     st.header("⚙️ Конфигурация")
     lang = st.selectbox("Язык ответа", ["Русский", "English"])
@@ -35,17 +33,14 @@ def load_llm():
 llm = load_llm()
 
 
-# --- ЛОГИКА ТРЕХ АГЕНТОВ ---
 
 def run_multi_agent_pipeline(user_query, db_path):
     db = SQLDatabase.from_uri(f"sqlite:///{db_path}")
 
-    # 1. АГЕНТ-АРХИТЕКТОР: Исследует схему
     with st.status("🕵️ Архитектор изучает структуру таблиц...") as status:
         schema_info = db.get_table_info()
         status.update(label="Схема получена", state="complete")
 
-    # 2. АГЕНТ-ПРОГРАММИСТ: Пишет SQL или отклоняет запрос
     with st.status("💻 Программист генерирует SQL...") as status:
         sql_prompt = ChatPromptTemplate.from_template("""
         Ты — Агент-Программист SQL для {dialect}. 
@@ -62,19 +57,16 @@ def run_multi_agent_pipeline(user_query, db_path):
         chain = sql_prompt | llm
         response = chain.invoke({"schema": schema_info, "query": user_query, "dialect": db_dialect}).content
 
-        # Проверка безопасности
         if "OUT_OF_CONTEXT" in response.upper():
             status.update(label="Запрос отклонен", state="error")
             return {"error": "Извините, в базе данных нет информации для ответа на этот вопрос."}
 
-        # Извлечение SQL
         sql_match = re.search(r"\[SQL\](.*?)\[/SQL\]", response, re.DOTALL)
         executed_sql = sql_match.group(1).strip() if sql_match else response.strip()
         executed_sql = executed_sql.replace("```sql", "").replace("```", "").strip()
 
         status.update(label="SQL подготовлен", state="complete")
 
-    # ВЫПОЛНЕНИЕ (Инфраструктура)
     try:
         engine = create_engine(f"sqlite:///{db_path}")
         with engine.connect() as conn:
@@ -82,7 +74,6 @@ def run_multi_agent_pipeline(user_query, db_path):
     except Exception as e:
         return {"error": f"Ошибка выполнения SQL: {e}", "sql_debug": executed_sql}
 
-    # 3. АГЕНТ-АНАЛИТИК: Интерпретирует результат
     with st.status("📊 Аналитик готовит финальный отчет...") as status:
         analysis_prompt = ChatPromptTemplate.from_template("""
         Ты — Агент-Аналитик. Твоя задача: ответить пользователю на основе данных.
@@ -99,9 +90,7 @@ def run_multi_agent_pipeline(user_query, db_path):
     return {"sql": executed_sql, "data": df, "answer": final_answer}
 
 
-# --- ИНТЕРФЕЙС ---
 if "db_path" in st.session_state:
-    # 1. Просмотрщик структуры (как на твоем скриншоте)
     with st.expander("📂 Структура базы данных (Превью)"):
         engine = create_engine(f"sqlite:///{st.session_state.db_path}")
         inspector = inspect(engine)
@@ -111,7 +100,6 @@ if "db_path" in st.session_state:
             selected_t = st.selectbox("Выберите таблицу для просмотра:", tables)
             st.dataframe(pd.read_sql_query(f"SELECT * FROM {selected_t} LIMIT 5", engine))
 
-    # 2. Поле ввода
     user_input = st.text_input("Задайте вопрос к данным (или попробуйте спросить рецепт):")
 
     if st.button("Запустить анализ"):
@@ -123,19 +111,15 @@ if "db_path" in st.session_state:
                 if "sql_debug" in result:
                     st.code(result["sql_debug"], language="sql")
             else:
-                # Результат работы Аналитика
                 st.success("Ответ агента:")
                 st.write(result["answer"])
 
-                # Показ SQL
                 with st.expander("🛠 Посмотреть SQL-запрос Программиста"):
                     st.code(result["sql"], language="sql")
 
-                # Таблица данных
                 st.subheader("🔢 Извлеченные данные:")
                 st.dataframe(result["data"], use_container_width=True)
 
-                # График
                 df = result["data"]
                 num_cols = df.select_dtypes(include=['number']).columns
                 if len(num_cols) > 0 and not df.empty:
