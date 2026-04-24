@@ -38,7 +38,6 @@ class HashCollection(Generic[K, V]):
                 self.add(k, v)
 
     def __del__(self) -> None:
-        # В Python время вызова __del__ не гарантировано, но очистку делаем.
         self.clear()
 
     def copy(self) -> "HashCollection[K, V]":
@@ -49,7 +48,6 @@ class HashCollection(Generic[K, V]):
         return (h & 0x7FFFFFFF) % len(self._buckets)
 
     def _maybe_rehash(self) -> None:
-        # простая политика: если load factor > 0.75 -> удвоение
         if self._size <= int(0.75 * len(self._buckets)):
             return
 
@@ -75,7 +73,6 @@ class HashCollection(Generic[K, V]):
         self._maybe_rehash()
 
     def __lshift__(self, pair: Tuple[K, V]) -> "HashCollection[K, V]":
-        # operator << (аналог C++): (key, value)
         k, v = pair
         self.add(k, v)
         return self
@@ -136,7 +133,6 @@ class HashCollection(Generic[K, V]):
         return True
 
     def __and__(self, other: "HashCollection[K, V]") -> "HashCollection[K, V]":
-        # аналог && -> пересечение по ключам (и равным значениям)
         out: HashCollection[K, V] = HashCollection(initial_capacity=8, hash_func=self._hash_func)
         for k, v in self.items():
             if other.contains(k) and other[k] == v:
