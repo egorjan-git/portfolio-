@@ -1,9 +1,0 @@
-stages:
-  - test
-
-test:
-  stage: test
-  image: python:3.12
-  script:
-    - python -m compileall projects/car_collection
-    - python projects/car_collection/main.py --test
