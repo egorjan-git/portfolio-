@@ -28,7 +28,6 @@ def main() -> None:
     if args.gui:
         run_gui(catalog, data_path)
     else:
-        # default CLI
         run_cli(catalog, data_path)
 
 
